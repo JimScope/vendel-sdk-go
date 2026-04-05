@@ -7,6 +7,15 @@ type SendSMSRequest struct {
 	DeviceID   string   `json:"device_id,omitempty"`
 }
 
+// SendSMSTemplateRequest is the payload for sending an SMS using a saved template.
+// Reserved variables ({{name}}, {{phone}}) are auto-filled from contacts.
+type SendSMSTemplateRequest struct {
+	Recipients []string          `json:"recipients"`
+	TemplateID string            `json:"template_id"`
+	Variables  map[string]string `json:"variables,omitempty"`
+	DeviceID   string            `json:"device_id,omitempty"`
+}
+
 // SendSMSResponse is returned after a successful send.
 type SendSMSResponse struct {
 	BatchID         string   `json:"batch_id"`

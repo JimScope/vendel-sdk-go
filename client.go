@@ -42,6 +42,16 @@ func (c *Client) SendSMS(ctx context.Context, req SendSMSRequest) (*SendSMSRespo
 	return &resp, nil
 }
 
+// SendSMSTemplate sends an SMS using a saved template with variable interpolation.
+// Reserved variables ({{name}}, {{phone}}) are auto-filled from contacts.
+func (c *Client) SendSMSTemplate(ctx context.Context, req SendSMSTemplateRequest) (*SendSMSResponse, error) {
+	var resp SendSMSResponse
+	if err := c.post(ctx, "/api/sms/send-template", req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
 // GetQuota returns the current quota for the authenticated user.
 func (c *Client) GetQuota(ctx context.Context) (*Quota, error) {
 	var resp Quota
