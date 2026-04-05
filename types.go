@@ -5,6 +5,7 @@ type SendSMSRequest struct {
 	Recipients []string `json:"recipients"`
 	Body       string   `json:"body"`
 	DeviceID   string   `json:"device_id,omitempty"`
+	GroupIDs   []string `json:"group_ids,omitempty"`
 }
 
 // SendSMSTemplateRequest is the payload for sending an SMS using a saved template.
@@ -14,6 +15,7 @@ type SendSMSTemplateRequest struct {
 	TemplateID string            `json:"template_id"`
 	Variables  map[string]string `json:"variables,omitempty"`
 	DeviceID   string            `json:"device_id,omitempty"`
+	GroupIDs   []string          `json:"group_ids,omitempty"`
 }
 
 // SendSMSResponse is returned after a successful send.
