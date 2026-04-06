@@ -35,3 +35,59 @@ type Quota struct {
 	MaxDevices       int    `json:"max_devices"`
 	ResetDate        string `json:"reset_date"`
 }
+
+// MessageStatus represents the delivery status of a single SMS message.
+type MessageStatus struct {
+	ID           string `json:"id"`
+	BatchID      string `json:"batch_id"`
+	Recipient    string `json:"recipient"`
+	Status       string `json:"status"`
+	ErrorMessage string `json:"error_message"`
+	DeviceID     string `json:"device_id"`
+	Created      string `json:"created"`
+	Updated      string `json:"updated"`
+}
+
+// BatchStatus represents the delivery status of all messages in a batch.
+type BatchStatus struct {
+	BatchID      string            `json:"batch_id"`
+	Total        int               `json:"total"`
+	StatusCounts map[string]int    `json:"status_counts"`
+	Messages     []MessageStatus   `json:"messages"`
+}
+
+// Contact represents a contact in the user's address book.
+type Contact struct {
+	ID          string   `json:"id"`
+	Name        string   `json:"name"`
+	PhoneNumber string   `json:"phone_number"`
+	Groups      []string `json:"groups"`
+	Notes       string   `json:"notes"`
+	Created     string   `json:"created"`
+	Updated     string   `json:"updated"`
+}
+
+// ContactGroup represents a contact group.
+type ContactGroup struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Created string `json:"created"`
+	Updated string `json:"updated"`
+}
+
+// PaginatedResponse is a generic paginated API response.
+type PaginatedResponse[T any] struct {
+	Items      []T `json:"items"`
+	Page       int `json:"page"`
+	PerPage    int `json:"per_page"`
+	TotalItems int `json:"total_items"`
+	TotalPages int `json:"total_pages"`
+}
+
+// ListContactsParams holds parameters for listing contacts.
+type ListContactsParams struct {
+	Page    int
+	PerPage int
+	Search  string
+	GroupID string
+}

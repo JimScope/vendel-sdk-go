@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -56,6 +58,70 @@ func (c *Client) SendSMSTemplate(ctx context.Context, req SendSMSTemplateRequest
 func (c *Client) GetQuota(ctx context.Context) (*Quota, error) {
 	var resp Quota
 	if err := c.get(ctx, "/api/plans/quota", &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// GetMessageStatus returns the delivery status of a single SMS message.
+func (c *Client) GetMessageStatus(ctx context.Context, messageID string) (*MessageStatus, error) {
+	var resp MessageStatus
+	if err := c.get(ctx, "/api/sms/status/"+messageID, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// GetBatchStatus returns the delivery status of all messages in a batch.
+func (c *Client) GetBatchStatus(ctx context.Context, batchID string) (*BatchStatus, error) {
+	var resp BatchStatus
+	if err := c.get(ctx, "/api/sms/batch/"+batchID, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// ListContacts lists contacts with optional search and group filter.
+func (c *Client) ListContacts(ctx context.Context, params ListContactsParams) (*PaginatedResponse[Contact], error) {
+	q := url.Values{}
+	if params.Page > 0 {
+		q.Set("page", strconv.Itoa(params.Page))
+	}
+	if params.PerPage > 0 {
+		q.Set("per_page", strconv.Itoa(params.PerPage))
+	}
+	if params.Search != "" {
+		q.Set("search", params.Search)
+	}
+	if params.GroupID != "" {
+		q.Set("group_id", params.GroupID)
+	}
+	path := "/api/contacts"
+	if qs := q.Encode(); qs != "" {
+		path += "?" + qs
+	}
+	var resp PaginatedResponse[Contact]
+	if err := c.get(ctx, path, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// ListContactGroups lists contact groups.
+func (c *Client) ListContactGroups(ctx context.Context, page, perPage int) (*PaginatedResponse[ContactGroup], error) {
+	q := url.Values{}
+	if page > 0 {
+		q.Set("page", strconv.Itoa(page))
+	}
+	if perPage > 0 {
+		q.Set("per_page", strconv.Itoa(perPage))
+	}
+	path := "/api/contacts/groups"
+	if qs := q.Encode(); qs != "" {
+		path += "?" + qs
+	}
+	var resp PaginatedResponse[ContactGroup]
+	if err := c.get(ctx, path, &resp); err != nil {
 		return nil, err
 	}
 	return &resp, nil
