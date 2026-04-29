@@ -127,6 +127,73 @@ func (c *Client) ListContactGroups(ctx context.Context, page, perPage int) (*Pag
 	return &resp, nil
 }
 
+// ListDevices lists registered devices with optional filters.
+// A nil opts is treated as no filters.
+func (c *Client) ListDevices(ctx context.Context, opts *ListDevicesOptions) (*PaginatedDevices, error) {
+	q := url.Values{}
+	if opts != nil {
+		if opts.Page != nil {
+			q.Set("page", strconv.Itoa(*opts.Page))
+		}
+		if opts.PerPage != nil {
+			q.Set("per_page", strconv.Itoa(*opts.PerPage))
+		}
+		if opts.DeviceType != nil {
+			q.Set("device_type", *opts.DeviceType)
+		}
+	}
+	path := "/api/devices"
+	if qs := q.Encode(); qs != "" {
+		path += "?" + qs
+	}
+	var resp PaginatedDevices
+	if err := c.get(ctx, path, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// ListMessages lists SMS messages with optional filters.
+// A nil opts is treated as no filters. From and To accept ISO8601 timestamps.
+func (c *Client) ListMessages(ctx context.Context, opts *ListMessagesOptions) (*PaginatedMessages, error) {
+	q := url.Values{}
+	if opts != nil {
+		if opts.Page != nil {
+			q.Set("page", strconv.Itoa(*opts.Page))
+		}
+		if opts.PerPage != nil {
+			q.Set("per_page", strconv.Itoa(*opts.PerPage))
+		}
+		if opts.Status != nil {
+			q.Set("status", *opts.Status)
+		}
+		if opts.DeviceID != nil {
+			q.Set("device_id", *opts.DeviceID)
+		}
+		if opts.BatchID != nil {
+			q.Set("batch_id", *opts.BatchID)
+		}
+		if opts.Recipient != nil {
+			q.Set("recipient", *opts.Recipient)
+		}
+		if opts.From != nil {
+			q.Set("from", *opts.From)
+		}
+		if opts.To != nil {
+			q.Set("to", *opts.To)
+		}
+	}
+	path := "/api/sms/messages"
+	if qs := q.Encode(); qs != "" {
+		path += "?" + qs
+	}
+	var resp PaginatedMessages
+	if err := c.get(ctx, path, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
 // ------------------------------------------------------------------
 // Internal helpers
 // ------------------------------------------------------------------
@@ -178,9 +245,9 @@ func (c *Client) do(req *http.Request, out any) error {
 		available, _ := detail["available"].(float64)
 		return &QuotaError{
 			VendelError: VendelError{StatusCode: 429, Message: msg, Detail: detail},
-			Limit:      int(limit),
-			Used:       int(used),
-			Available:  int(available),
+			Limit:       int(limit),
+			Used:        int(used),
+			Available:   int(available),
 		}
 	}
 

@@ -28,12 +28,12 @@ type SendSMSResponse struct {
 
 // Quota represents the user's current plan limits and usage.
 type Quota struct {
-	Plan             string `json:"plan"`
-	SMSSentThisMonth int    `json:"sms_sent_this_month"`
-	MaxSMSPerMonth   int    `json:"max_sms_per_month"`
-	DevicesRegistered int   `json:"devices_registered"`
-	MaxDevices       int    `json:"max_devices"`
-	ResetDate        string `json:"reset_date"`
+	Plan              string `json:"plan"`
+	SMSSentThisMonth  int    `json:"sms_sent_this_month"`
+	MaxSMSPerMonth    int    `json:"max_sms_per_month"`
+	DevicesRegistered int    `json:"devices_registered"`
+	MaxDevices        int    `json:"max_devices"`
+	ResetDate         string `json:"reset_date"`
 }
 
 // MessageStatus represents the delivery status of a single SMS message.
@@ -41,19 +41,24 @@ type MessageStatus struct {
 	ID           string `json:"id"`
 	BatchID      string `json:"batch_id"`
 	Recipient    string `json:"recipient"`
+	FromNumber   string `json:"from_number"`
+	Body         string `json:"body"`
 	Status       string `json:"status"`
+	MessageType  string `json:"message_type"`
 	ErrorMessage string `json:"error_message"`
 	DeviceID     string `json:"device_id"`
+	SentAt       string `json:"sent_at"`
+	DeliveredAt  string `json:"delivered_at"`
 	Created      string `json:"created"`
 	Updated      string `json:"updated"`
 }
 
 // BatchStatus represents the delivery status of all messages in a batch.
 type BatchStatus struct {
-	BatchID      string            `json:"batch_id"`
-	Total        int               `json:"total"`
-	StatusCounts map[string]int    `json:"status_counts"`
-	Messages     []MessageStatus   `json:"messages"`
+	BatchID      string          `json:"batch_id"`
+	Total        int             `json:"total"`
+	StatusCounts map[string]int  `json:"status_counts"`
+	Messages     []MessageStatus `json:"messages"`
 }
 
 // Contact represents a contact in the user's address book.
@@ -90,4 +95,42 @@ type ListContactsParams struct {
 	PerPage int
 	Search  string
 	GroupID string
+}
+
+// Device represents a registered SMS gateway device (Android phone or modem).
+type Device struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	DeviceType  string `json:"device_type"`
+	PhoneNumber string `json:"phone_number"`
+	Created     string `json:"created"`
+	Updated     string `json:"updated"`
+}
+
+// PaginatedDevices is a paginated response of devices.
+type PaginatedDevices = PaginatedResponse[Device]
+
+// PaginatedMessages is a paginated response of messages.
+type PaginatedMessages = PaginatedResponse[MessageStatus]
+
+// ListDevicesOptions holds optional parameters for listing devices.
+// All fields are pointers so callers can distinguish unset from zero.
+type ListDevicesOptions struct {
+	Page       *int
+	PerPage    *int
+	DeviceType *string
+}
+
+// ListMessagesOptions holds optional parameters for listing messages.
+// All fields are pointers so callers can distinguish unset from zero.
+// From and To accept ISO8601 timestamps.
+type ListMessagesOptions struct {
+	Page      *int
+	PerPage   *int
+	Status    *string
+	DeviceID  *string
+	BatchID   *string
+	Recipient *string
+	From      *string
+	To        *string
 }

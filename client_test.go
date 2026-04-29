@@ -158,6 +158,158 @@ func TestClient_APIError(t *testing.T) {
 	}
 }
 
+func ptr[T any](v T) *T { return &v }
+
+func TestListDevices_Success(t *testing.T) {
+	client, srv := testServer(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/devices" {
+			t.Errorf("path = %q, want /api/devices", r.URL.Path)
+		}
+		if r.Method != http.MethodGet {
+			t.Errorf("method = %q, want GET", r.Method)
+		}
+		q := r.URL.Query()
+		if q.Get("page") != "2" {
+			t.Errorf("page = %q, want 2", q.Get("page"))
+		}
+		if q.Get("per_page") != "25" {
+			t.Errorf("per_page = %q, want 25", q.Get("per_page"))
+		}
+		if q.Get("device_type") != "android" {
+			t.Errorf("device_type = %q, want android", q.Get("device_type"))
+		}
+		json.NewEncoder(w).Encode(PaginatedDevices{
+			Items: []Device{
+				{ID: "d1", Name: "Pixel", DeviceType: "android", PhoneNumber: "+15551234567", Created: "2026-01-01T00:00:00Z", Updated: "2026-01-02T00:00:00Z"},
+			},
+			Page: 2, PerPage: 25, TotalItems: 26, TotalPages: 2,
+		})
+	})
+	defer srv.Close()
+
+	resp, err := client.ListDevices(context.Background(), &ListDevicesOptions{
+		Page: ptr(2), PerPage: ptr(25), DeviceType: ptr("android"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.Items) != 1 || resp.Items[0].ID != "d1" {
+		t.Errorf("unexpected items: %+v", resp.Items)
+	}
+	if resp.Items[0].DeviceType != "android" || resp.Items[0].PhoneNumber != "+15551234567" {
+		t.Errorf("device fields: %+v", resp.Items[0])
+	}
+	if resp.Page != 2 || resp.TotalItems != 26 || resp.TotalPages != 2 {
+		t.Errorf("pagination: %+v", resp)
+	}
+}
+
+func TestListDevices_NoOptions(t *testing.T) {
+	client, srv := testServer(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.RawQuery != "" {
+			t.Errorf("expected no query, got %q", r.URL.RawQuery)
+		}
+		json.NewEncoder(w).Encode(PaginatedDevices{Items: []Device{}, Page: 1, PerPage: 50})
+	})
+	defer srv.Close()
+
+	resp, err := client.ListDevices(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Page != 1 {
+		t.Errorf("page = %d", resp.Page)
+	}
+}
+
+func TestListMessages_Success(t *testing.T) {
+	client, srv := testServer(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/sms/messages" {
+			t.Errorf("path = %q, want /api/sms/messages", r.URL.Path)
+		}
+		q := r.URL.Query()
+		checks := map[string]string{
+			"page": "1", "per_page": "10", "status": "delivered",
+			"device_id": "d1", "batch_id": "b1", "recipient": "+1",
+			"from": "2026-01-01T00:00:00Z", "to": "2026-02-01T00:00:00Z",
+		}
+		for k, want := range checks {
+			if got := q.Get(k); got != want {
+				t.Errorf("query %s = %q, want %q", k, got, want)
+			}
+		}
+		json.NewEncoder(w).Encode(PaginatedMessages{
+			Items: []MessageStatus{
+				{
+					ID: "m1", BatchID: "b1", Recipient: "+1234", FromNumber: "+15550000",
+					Body: "Hello", Status: "delivered", MessageType: "outbound",
+					DeviceID: "d1", SentAt: "2026-01-15T00:00:00Z", DeliveredAt: "2026-01-15T00:00:01Z",
+					Created: "2026-01-15T00:00:00Z", Updated: "2026-01-15T00:00:01Z",
+				},
+			},
+			Page: 1, PerPage: 10, TotalItems: 1, TotalPages: 1,
+		})
+	})
+	defer srv.Close()
+
+	resp, err := client.ListMessages(context.Background(), &ListMessagesOptions{
+		Page: ptr(1), PerPage: ptr(10), Status: ptr("delivered"),
+		DeviceID: ptr("d1"), BatchID: ptr("b1"), Recipient: ptr("+1"),
+		From: ptr("2026-01-01T00:00:00Z"), To: ptr("2026-02-01T00:00:00Z"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.Items) != 1 {
+		t.Fatalf("items count = %d, want 1", len(resp.Items))
+	}
+	m := resp.Items[0]
+	if m.FromNumber != "+15550000" {
+		t.Errorf("from_number = %q, want +15550000", m.FromNumber)
+	}
+	if m.MessageType != "outbound" {
+		t.Errorf("message_type = %q, want outbound", m.MessageType)
+	}
+	if m.Body != "Hello" || m.SentAt == "" || m.DeliveredAt == "" {
+		t.Errorf("missing fields: %+v", m)
+	}
+}
+
+func TestListMessages_NoOptions(t *testing.T) {
+	client, srv := testServer(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.RawQuery != "" {
+			t.Errorf("expected no query, got %q", r.URL.RawQuery)
+		}
+		json.NewEncoder(w).Encode(PaginatedMessages{Items: []MessageStatus{}, Page: 1, PerPage: 50})
+	})
+	defer srv.Close()
+
+	resp, err := client.ListMessages(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.PerPage != 50 {
+		t.Errorf("per_page = %d, want 50", resp.PerPage)
+	}
+}
+
+func TestMessageStatus_DecodesNewFields(t *testing.T) {
+	raw := `{"id":"m1","batch_id":"b1","recipient":"+1","from_number":"+15550000","body":"hi","status":"delivered","message_type":"inbound","device_id":"d1","sent_at":"2026-01-15T00:00:00Z","delivered_at":"2026-01-15T00:00:01Z","created":"2026-01-15T00:00:00Z","updated":"2026-01-15T00:00:01Z"}`
+	var m MessageStatus
+	if err := json.Unmarshal([]byte(raw), &m); err != nil {
+		t.Fatal(err)
+	}
+	if m.FromNumber != "+15550000" {
+		t.Errorf("FromNumber = %q", m.FromNumber)
+	}
+	if m.MessageType != "inbound" {
+		t.Errorf("MessageType = %q", m.MessageType)
+	}
+	if m.Body != "hi" || m.SentAt == "" || m.DeliveredAt == "" {
+		t.Errorf("missing fields: %+v", m)
+	}
+}
+
 func TestClient_QuotaError(t *testing.T) {
 	client, srv := testServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(429)
